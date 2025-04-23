@@ -8,3 +8,10 @@ conda create -n myEnv python=3.12
 conda activate myEnv
 pip install -r requirements.txt
 ```
+
+## Code Style
+Run
+```python
+black *.py
+```
+to format all codes before commit.
