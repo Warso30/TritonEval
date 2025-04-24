@@ -15,9 +15,10 @@ from transformers import (
     Trainer,
     TrainerCallback,
     TrainingArguments,
-    DataCollatorForLanguageModeling
+    DataCollatorForLanguageModeling,
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+
 
 class TimerCallback(TrainerCallback):
     def __init__(self):
@@ -31,7 +32,10 @@ class TimerCallback(TrainerCallback):
     def on_epoch_end(self, args, state, control, **kwargs):
         self.end_timer.record()
         torch.cuda.synchronize()
-        print(f"Epoch {int(state.epoch)} finished in {self.start_timer.elapsed_time(self.end_timer) / 1000}s")
+        print(
+            f"Epoch {int(state.epoch)} finished in {self.start_timer.elapsed_time(self.end_timer) / 1000}s"
+        )
+
 
 def format_batch(batch, tokenizer):
     """
@@ -44,15 +48,28 @@ def format_batch(batch, tokenizer):
         else:
             prompt = f"### Instruction:\n{instr}\n### Response:\n"
         full = prompt + out
-        tokenized = tokenizer(full, truncation=True, max_length=512, padding="max_length")
+        tokenized = tokenizer(
+            full, truncation=True, max_length=512, padding="max_length"
+        )
         inputs.append(tokenized["input_ids"])
         labels.append(tokenized["input_ids"])
-    return {"input_ids": inputs, "attention_mask": [[1 if id != tokenizer.pad_token_id else 0 for id in seq] for seq in inputs], "labels": labels}
+    return {
+        "input_ids": inputs,
+        "attention_mask": [
+            [1 if id != tokenizer.pad_token_id else 0 for id in seq] for seq in inputs
+        ],
+        "labels": labels,
+    }
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Fine-tune llama3.2-1b')
-    parser.add_argument('--access-token', required=True, help='Huggingface access token')
-    parser.add_argument('--enable-flaggems', action='store_true', help='Enable FlagGems')
+    parser = argparse.ArgumentParser(description="Fine-tune llama3.2-1b")
+    parser.add_argument(
+        "--access-token", required=True, help="Huggingface access token"
+    )
+    parser.add_argument(
+        "--enable-flaggems", action="store_true", help="Enable FlagGems"
+    )
     args = parser.parse_args()
     model_name = "meta-llama/Llama-3.2-1B"
     output_dir = "finetuned_models"
@@ -66,13 +83,13 @@ def main():
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True
+        bnb_4bit_use_double_quant=True,
     )
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
         device_map="auto",
-        token=args.access_token
+        token=args.access_token,
     )
     model = prepare_model_for_kbit_training(model)
 
@@ -82,7 +99,7 @@ def main():
         target_modules=["q_proj", "v_proj"],
         lora_dropout=0.05,
         bias="none",
-        task_type="CAUSAL_LM"
+        task_type="CAUSAL_LM",
     )
     model = get_peft_model(model, lora_config)
 
@@ -90,7 +107,7 @@ def main():
         format_batch,
         batched=True,
         remove_columns=dataset["train"].column_names,
-        fn_kwargs={"tokenizer": tokenizer}
+        fn_kwargs={"tokenizer": tokenizer},
     )
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
@@ -105,7 +122,7 @@ def main():
         save_steps=200,
         save_total_limit=2,
         fp16=False,
-        optim="paged_adamw_8bit"
+        optim="paged_adamw_8bit",
     )
 
     trainer = Trainer(
@@ -114,7 +131,7 @@ def main():
         train_dataset=tokenized,
         data_collator=data_collator,
         tokenizer=tokenizer,
-        callbacks=[TimerCallback()]
+        callbacks=[TimerCallback()],
     )
 
     if args.enable_flaggems:

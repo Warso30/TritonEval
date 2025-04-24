@@ -114,7 +114,7 @@ def main():
         "--lr", type=float, default=0.0001, help="Learning rate for optimizer"
     )
     parser.add_argument(
-        "--enable-flaggems", action='store_true', help="Enable FlagGems"
+        "--enable-flaggems", action="store_true", help="Enable FlagGems"
     )
     args = parser.parse_args()
 
@@ -129,9 +129,19 @@ def main():
 
     if args.enable_flaggems:
         with flag_gems.use_gems():
-            train(model, train_loader, val_loader, criterion, optimizer, device, args.epochs)
+            train(
+                model,
+                train_loader,
+                val_loader,
+                criterion,
+                optimizer,
+                device,
+                args.epochs,
+            )
     else:
-        train(model, train_loader, val_loader, criterion, optimizer, device, args.epochs)
+        train(
+            model, train_loader, val_loader, criterion, optimizer, device, args.epochs
+        )
 
 
 if __name__ == "__main__":
