@@ -6,7 +6,7 @@ import torchvision
 import tqdm
 from utils.logger import StatsLogger
 
-def get_dataloaders(batch_size=4, num_workers=os.cpu_count()):
+def get_dataloaders(batch_size, num_workers):
     mean_values = (0.5, 0.5, 0.5)
     std_values = (0.5, 0.5, 0.5)
 
@@ -106,8 +106,14 @@ def main():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=64,
+        default=4,
         help="Batch size for training and validation",
+    )
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=os.cpu_count(),
+        help="Number of workers for data loading",
     )
     parser.add_argument(
         "--lr", type=float, default=0.0001, help="Learning rate for optimizer"
@@ -124,7 +130,7 @@ def main():
     stats_logger = StatsLogger(args.out_path)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader = get_dataloaders()
+    train_loader, val_loader = get_dataloaders(args.batch_size, args.num_workers)
     model = build_model(10).to(device)
 
     criterion = torch.nn.CrossEntropyLoss()
