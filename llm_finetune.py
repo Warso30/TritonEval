@@ -1,26 +1,12 @@
-#!/usr/bin/env python3
-"""
-Fine-tune Llama3.2-1b on the Stanford Alpaca dataset using LoRA (4-bit quantization)
-Requirements:
-    pip install transformers datasets accelerate peft bitsandbytes
-"""
 import argparse
+import datasets
 import flag_gems
+import peft
 import torch
-from datasets import load_dataset
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    BitsAndBytesConfig,
-    Trainer,
-    TrainerCallback,
-    TrainingArguments,
-    DataCollatorForLanguageModeling,
-)
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+import transformers
 
 
-class TimerCallback(TrainerCallback):
+class TimerCallback(transformers.TrainerCallback):
     def __init__(self):
         super().__init__()
         self.start_timer = torch.cuda.Event(enable_timing=True)
@@ -74,26 +60,28 @@ def main():
     model_name = "meta-llama/Llama-3.2-1B"
     output_dir = "finetuned_models"
 
-    dataset = load_dataset("tatsu-lab/alpaca")
+    dataset = datasets.load_dataset("tatsu-lab/alpaca")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, token=args.access_token)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        model_name, token=args.access_token
+    )
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    bnb_config = BitsAndBytesConfig(
+    bnb_config = transformers.BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.float16,
         bnb_4bit_use_double_quant=True,
     )
-    model = AutoModelForCausalLM.from_pretrained(
+    model = transformers.AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
         device_map="auto",
         token=args.access_token,
     )
-    model = prepare_model_for_kbit_training(model)
+    model = peft.prepare_model_for_kbit_training(model)
 
-    lora_config = LoraConfig(
+    lora_config = peft.LoraConfig(
         r=8,
         lora_alpha=16,
         target_modules=["q_proj", "v_proj"],
@@ -101,7 +89,7 @@ def main():
         bias="none",
         task_type="CAUSAL_LM",
     )
-    model = get_peft_model(model, lora_config)
+    model = peft.get_peft_model(model, lora_config)
 
     tokenized = dataset["train"].map(
         format_batch,
@@ -110,9 +98,11 @@ def main():
         fn_kwargs={"tokenizer": tokenizer},
     )
 
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    data_collator = transformers.DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, mlm=False
+    )
 
-    training_args = TrainingArguments(
+    training_args = transformers.TrainingArguments(
         output_dir=output_dir,
         per_device_train_batch_size=4,
         gradient_accumulation_steps=4,
@@ -125,7 +115,7 @@ def main():
         optim="paged_adamw_8bit",
     )
 
-    trainer = Trainer(
+    trainer = transformers.Trainer(
         model=model,
         args=training_args,
         train_dataset=tokenized,
