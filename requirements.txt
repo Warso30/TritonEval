@@ -1,7 +1,7 @@
 bitsandbytes
 datasets
 peft
-torch
+torch==2.6.0
 torchvision
 tqdm
 transformers
