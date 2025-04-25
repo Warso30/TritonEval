@@ -1,3 +1,5 @@
 .venv/
 data/
 src/
+results/
+__pycache__

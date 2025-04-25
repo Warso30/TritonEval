@@ -4,7 +4,7 @@ import os
 import torch
 import torchvision
 import tqdm
-
+from utils.logger import StatsLogger
 
 def get_dataloaders(batch_size=4, num_workers=os.cpu_count()):
     mean_values = (0.5, 0.5, 0.5)
@@ -49,14 +49,21 @@ def build_model(num_classes):
 def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
     running_loss = 0.0
+    start_timer = torch.cuda.Event(enable_timing=True)
+    end_timer = torch.cuda.Event(enable_timing=True)
     for inputs, targets in tqdm.tqdm(loader, desc="Train", leave=False):
+        start_timer.record()
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
-        running_loss += loss.item() * inputs.size(0)
+        end_timer.record()
+        torch.cuda.synchronize()
+        round_loss = loss.item() * inputs.size(0)
+        running_loss += round_loss
+        stats_logger.log_round(start_timer.elapsed_time(end_timer) / 1000, round_loss)
     return running_loss / len(loader.dataset)
 
 
@@ -79,19 +86,11 @@ def validate(model, loader, criterion, device):
 
 def train(model, train_loader, val_loader, criterion, optimizer, device, epochs):
     best_acc = 0.0
-    start_timer = torch.cuda.Event(enable_timing=True)
-    end_timer = torch.cuda.Event(enable_timing=True)
+
     for epoch in range(1, epochs + 1):
-        start_timer.record()
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
-        end_timer.record()
-        torch.cuda.synchronize()
         val_loss, val_acc = validate(model, val_loader, criterion, device)
-        print(
-            f"Epoch {epoch:02d}  Train Loss: {train_loss:.4f}  "
-            f"Val Loss: {val_loss:.4f}  Val Acc: {val_acc:.4f} "
-            f"Training Time: {start_timer.elapsed_time(end_timer) / 1000}s"
-        )
+        stats_logger.log_epoch(train_loss, val_loss, val_acc)
 
         # Save best model
         if val_acc > best_acc:
@@ -116,7 +115,13 @@ def main():
     parser.add_argument(
         "--enable-flaggems", action="store_true", help="Enable FlagGems"
     )
+    parser.add_argument(
+        "--out-path", type=str, default="results/vgg16_finetune_stats.json", help="Output path for statistics"
+    )
     args = parser.parse_args()
+
+    global stats_logger
+    stats_logger = StatsLogger(args.out_path)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_loader, val_loader = get_dataloaders()
@@ -127,21 +132,24 @@ def main():
         model.classifier.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4
     )
 
-    if args.enable_flaggems:
-        with flag_gems.use_gems():
+    try:
+        if args.enable_flaggems:
+            with flag_gems.use_gems():
+                train(
+                    model,
+                    train_loader,
+                    val_loader,
+                    criterion,
+                    optimizer,
+                    device,
+                    args.epochs,
+                )
+        else:
             train(
-                model,
-                train_loader,
-                val_loader,
-                criterion,
-                optimizer,
-                device,
-                args.epochs,
+                model, train_loader, val_loader, criterion, optimizer, device, args.epochs
             )
-    else:
-        train(
-            model, train_loader, val_loader, criterion, optimizer, device, args.epochs
-        )
+    finally:
+        stats_logger.save()
 
 
 if __name__ == "__main__":
