@@ -1,3 +1,4 @@
+*.pth
 .venv/
 data/
 src/
