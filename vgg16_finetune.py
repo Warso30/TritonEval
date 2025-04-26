@@ -7,6 +7,7 @@ import torchvision
 import tqdm
 from utils.logger import StatsLogger
 
+
 def get_dataloaders(batch_size, num_workers):
     mean_values = (0.5, 0.5, 0.5)
     std_values = (0.5, 0.5, 0.5)
@@ -156,7 +157,13 @@ def main():
                 )
         else:
             train(
-                model, train_loader, val_loader, criterion, optimizer, device, args.epochs
+                model,
+                train_loader,
+                val_loader,
+                criterion,
+                optimizer,
+                device,
+                args.epochs,
             )
     finally:
         if args.enable_flaggems:
@@ -164,7 +171,11 @@ def main():
         else:
             autotuner = "no"
         if args.stat_name:
-            stats_logger.save(args.stat_name if args.stat_name.endswith(".json") else f"{args.stat_name}.json")
+            stats_logger.save(
+                args.stat_name
+                if args.stat_name.endswith(".json")
+                else f"{args.stat_name}.json"
+            )
         else:
             date: str = datetime.now().strftime("%m_%d_%H_%M_%S")
             stats_logger.save(f"vgg16_{autotuner}_autotuner_{date}.json")

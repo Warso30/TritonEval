@@ -20,8 +20,8 @@ def plot(stats: Dict[str, List[float]], save: bool):
     for stat_type in stats:
         if stats[stat_type]:
             steps = list(range(1, len(stats[stat_type]) + 1))
-            durations = [s['duration'] for s in stats[stat_type]]
-            losses = [s['loss'] for s in stats[stat_type]]
+            durations = [s["duration"] for s in stats[stat_type]]
+            losses = [s["loss"] for s in stats[stat_type]]
             ax_durations.plot(steps, durations, label=stat_type)
             ax_durations.legend()
             ax_losses.plot(steps, losses, label=stat_type)
@@ -46,12 +46,32 @@ def plot(stats: Dict[str, List[float]], save: bool):
 
 def main():
     parser = argparse.ArgumentParser(description="Plot finetune stat")
-    parser.add_argument("--none", type=str, help="JSON file containing stats for finetune without Autotuner")
-    parser.add_argument("--default", type=str, help="JSON file containing stats for finetune with Autotuner")
-    parser.add_argument("--stepwise", type=str, help="JSON file containing stats for finetune with StepwiseAutotuner")
-    parser.add_argument("--epsilon", type=str, help="JSON file containing stats for finetune with EpsilonAutotuner")
-    parser.add_argument("--confidence", type=str, help="JSON file containing stats for finetune with ConfidenceAutotuner")
-    parser.add_argument("--no-save", action='store_true', help="Save the plot")
+    parser.add_argument(
+        "--none",
+        type=str,
+        help="JSON file containing stats for finetune without Autotuner",
+    )
+    parser.add_argument(
+        "--default",
+        type=str,
+        help="JSON file containing stats for finetune with Autotuner",
+    )
+    parser.add_argument(
+        "--stepwise",
+        type=str,
+        help="JSON file containing stats for finetune with StepwiseAutotuner",
+    )
+    parser.add_argument(
+        "--epsilon",
+        type=str,
+        help="JSON file containing stats for finetune with EpsilonAutotuner",
+    )
+    parser.add_argument(
+        "--confidence",
+        type=str,
+        help="JSON file containing stats for finetune with ConfidenceAutotuner",
+    )
+    parser.add_argument("--no-save", action="store_true", help="Save the plot")
     args = parser.parse_args()
 
     stats = {
@@ -59,7 +79,7 @@ def main():
         "default": read_stats(args.default),
         "stepwise": read_stats(args.stepwise),
         "epsilon": read_stats(args.epsilon),
-        "confidence": read_stats(args.confidence)
+        "confidence": read_stats(args.confidence),
     }
 
     plot(stats, not args.no_save)
