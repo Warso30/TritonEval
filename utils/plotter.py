@@ -37,8 +37,9 @@ def plot(stats: Dict[str, List[float]], save: bool):
 
     if save:
         os.makedirs("plots", exist_ok=True)
-        fig_durations.savefig(f"plots/time_{datetime.now().strftime("%m_%d_%H_%M_%S")}")
-        fig_losses.savefig(f"plots/loss_{datetime.now().strftime("%m_%d_%H_%M_%S")}")
+        date: str = datetime.now().strftime("%m_%d_%H_%M_%S")
+        fig_durations.savefig(f"plots/time_{date}")
+        fig_losses.savefig(f"plots/loss_{date}")
     else:
         plt.show()
 

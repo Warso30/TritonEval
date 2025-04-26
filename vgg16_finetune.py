@@ -166,7 +166,8 @@ def main():
         if args.stat_name:
             stats_logger.save(args.stat_name if args.stat_name.endswith(".json") else f"{args.stat_name}.json")
         else:
-            stats_logger.save(f"vgg16_{autotuner}_autotuner_{datetime.now().strftime("%m_%d_%H_%M_%S")}.json")
+            date: str = datetime.now().strftime("%m_%d_%H_%M_%S")
+            stats_logger.save(f"vgg16_{autotuner}_autotuner_{date}.json")
 
 
 if __name__ == "__main__":
