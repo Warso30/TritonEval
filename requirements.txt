@@ -1,5 +1,6 @@
 bitsandbytes
 datasets
+matplotlib
 peft
 torch==2.6.0
 torchvision

@@ -3,4 +3,6 @@
 data/
 src/
 results/
+stats/
+plots/
 __pycache__

@@ -1,6 +1,7 @@
 import argparse
 import flag_gems
 import os
+from datetime import datetime
 import torch
 import torchvision
 import tqdm
@@ -122,12 +123,15 @@ def main():
         "--enable-flaggems", action="store_true", help="Enable FlagGems"
     )
     parser.add_argument(
-        "--out-path", type=str, default="results/vgg16_finetune_stats.json", help="Output path for statistics"
+        "--stat-dir", type=str, default="stats", help="Directory path for statistics"
+    )
+    parser.add_argument(
+        "--stat-name", type=str, default=None, help="File name to store statistics"
     )
     args = parser.parse_args()
 
     global stats_logger
-    stats_logger = StatsLogger(args.out_path)
+    stats_logger = StatsLogger(args.stat_dir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_loader, val_loader = get_dataloaders(args.batch_size, args.num_workers)
@@ -155,7 +159,14 @@ def main():
                 model, train_loader, val_loader, criterion, optimizer, device, args.epochs
             )
     finally:
-        stats_logger.save()
+        if args.enable_flaggems:
+            autotuner = os.getenv("TRITON_AUTOTUNE", "default")
+        else:
+            autotuner = "no"
+        if args.stat_name:
+            stats_logger.save(args.stat_name if args.stat_name.endswith(".json") else f"{args.stat_name}.json")
+        else:
+            stats_logger.save(f"vgg16_{autotuner}_autotuner_{datetime.now().strftime("%m_%d_%H_%M_%S")}.json")
 
 
 if __name__ == "__main__":

@@ -3,13 +3,13 @@ import json
 
 
 class StatsLogger:
-    def __init__(self, out_path):
-        self.out_path = out_path
+    def __init__(self, out_dir):
+        self.out_dir = out_dir
         self.stats = {
             "round_stats": [],
             "epoch_stats": [],
         }
-        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        os.makedirs(out_dir, exist_ok=True)
 
 
     def log_round(self, duration, loss):
@@ -31,6 +31,6 @@ class StatsLogger:
         )
 
 
-    def save(self):
-        with open(self.out_path, "w") as out_file:
+    def save(self, file_name):
+        with open(os.path.join(self.out_dir, file_name), "w") as out_file:
             json.dump(self.stats, out_file, indent=2)
