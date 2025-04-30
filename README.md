@@ -26,3 +26,28 @@ Run
 black *.py
 ```
 to format all codes before commit.
+
+# CIFAR-10 Training
+Run
+```bash
+TRITON_AUTOTUNE=<optimal_choice> python train_cifar10.py --enable-flaggems --model=<model_name>
+```
+### Parameters:
+* `TRITON_AUTOTUNE=<optimal_choice>`: default, ...
+* `--model=<model_name>`: choices=[
+            "VGG16",
+            "ResNet18",
+            "PreActResNet18",
+            "GoogLeNet",
+            "DenseNet121",
+            "ResNeXt29_2x64d",
+            "MobileNet",
+            "MobileNetV2",
+            "DPN92",
+            "ShuffleNetG2",
+            "SENet18",
+            "ShuffleNetV2",
+            "EfficientNetB0",
+            "RegNetX_200MF",
+            "SimpleDLA",
+        ]
