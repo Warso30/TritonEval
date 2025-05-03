@@ -33,10 +33,26 @@ def adjust_yvalues(
     return adj_vals
 
 
-def plot(stats: Dict[str, List[float]], save: bool):
+def apply_avg_filter(data: List[float], avg_len: int, step_size: int) -> List[float]:
+    avg_len = max(1, avg_len)
+    step_size = max(1, step_size)
+    n = len(data)
+    out = []
+    i = -(avg_len - 1)
+    while i < n:
+        start = max(i, 0)
+        end = min(i + avg_len, n)
+        window = data[start:end]
+        if window:
+            out.append(sum(window) / len(window))
+        i += step_size
+    return out
+
+
+def plot(stats: Dict[str, List[float]], save: bool, avg_len: int, step_size: int):
     threshold = 0.1
     max_val = 60
-    yticks = np.arange(0, threshold + 0.01, step=0.01)
+    yticks = np.arange(0, threshold + 0.01, step=0.02)
     if max_val > threshold:
         high_yticks = np.linspace(threshold, max_val, num=5)[1:].astype(np.int16)
         yticks = np.concatenate((yticks, high_yticks))
@@ -47,15 +63,23 @@ def plot(stats: Dict[str, List[float]], save: bool):
     for stat_type in stats:
         stat_data, stat_marker = stats[stat_type]
         if stat_data:
-            steps = list(range(1, len(stat_data) + 1))
             durations = [s["duration"] for s in stat_data]
+            durations = durations[:1] + apply_avg_filter(
+                durations[1:], avg_len, step_size
+            )
+            durations_steps = list(range(1, len(durations) + 1))
             losses = [s["loss"] for s in stat_data]
+            losses_steps = list(range(1, len(losses) + 1))
             durations = adjust_yvalues(durations, threshold, max_val)
             ax_durations.plot(
-                steps, durations, label=stat_type, markevery=[0], marker=stat_marker
+                durations_steps,
+                durations,
+                label=stat_type,
+                markevery=[0],
+                marker=stat_marker,
             )
             ax_durations.legend()
-            ax_losses.plot(steps, losses, label=stat_type)
+            ax_losses.plot(losses_steps, losses, label=stat_type)
             ax_losses.legend()
 
     ax_durations.set_yticks(adj_yticks, labels=[f"{t:.2f}" for t in yticks])
@@ -103,6 +127,18 @@ def main():
         type=str,
         help="JSON file containing stats for finetune with ConfidenceAutotuner",
     )
+    parser.add_argument(
+        "--avg-len",
+        type=int,
+        default=10,
+        help="The length of the moving average filter",
+    )
+    parser.add_argument(
+        "--step-size",
+        type=int,
+        default=1,
+        help="The length of the moving average filter",
+    )
     parser.add_argument("--no-save", action="store_true", help="Save the plot")
     args = parser.parse_args()
 
@@ -114,7 +150,7 @@ def main():
         "confidence": (read_stats(args.confidence), "s"),
     }
 
-    plot(stats, not args.no_save)
+    plot(stats, not args.no_save, args.avg_len, args.step_size)
 
 
 if __name__ == "__main__":
