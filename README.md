@@ -51,3 +51,30 @@ TRITON_AUTOTUNE=<optimal_choice> python train_cifar10.py --enable-flaggems --mod
             "RegNetX_200MF",
             "SimpleDLA",
         ]
+
+# Visualization
+
+```bash
+python utils/plotter.py [OPTIONS]
+```
+All options are **optional**. If you omit an option, its corresponding plot (or smoothing) will simply be skipped or use built-in defaults.
+
+### Options
+
+| Option                 | Argument             | Description                                                                               |
+|------------------------|----------------------|-------------------------------------------------------------------------------------------|
+| `--default <FILE>`     | Path to JSON file    | Plot the **default autotuner** data series from `<FILE>`.                                           |
+| `--stepwise <FILE>`    | Path to JSON file    | Plot the **stepwise autotuner** data series from `<FILE>`.                                          |
+| `--epsilon <FILE>`     | Path to JSON file    | Plot the **epsilon autotuner** data series from `<FILE>`.                                           |
+| `--avg-len <INT>`      | Integer (e.g. 300)   | Apply a running‐average filter of length `<INT>` to each plotted series.                  |
+| `--step-size <INT>`    | Integer (e.g. 100)   | When filtering, jump the window by `<INT>` samples between consecutive averages.          |
+
+### How It Works
+
+- **Running‐average filter** (`--avg-len`): smooths each series by averaging over a sliding window of the given length.
+- **Step size** (`--step-size`): controls how far the window moves between consecutive averages. A step size smaller than `avg-len` gives overlapping windows; equal to `avg-len` gives non-overlapping blocks.
+
+### Example
+   ```bash
+   python utils/plotter.py --default stats/default.json --stepwise stats/stepwise.json --epsilon stats/epsilon.json --avg-len=100 --step-size=100
+   ```
