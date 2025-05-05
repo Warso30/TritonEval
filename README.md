@@ -33,7 +33,7 @@ Run
 TRITON_AUTOTUNE=<optimal_choice> python train_cifar10.py --enable-flaggems --model=<model_name>
 ```
 ### Parameters:
-* `TRITON_AUTOTUNE=<optimal_choice>`: default, ...
+* `TRITON_AUTOTUNE=<optimal_choice>`: default, epsilon, stepwise
 * `--model=<model_name>`: choices=[
             "VGG16",
             "ResNet18",
@@ -50,6 +50,17 @@ TRITON_AUTOTUNE=<optimal_choice> python train_cifar10.py --enable-flaggems --mod
             "EfficientNetB0",
             "RegNetX_200MF",
             "SimpleDLA",
+        ]
+
+# Translation Training
+Run
+```bash
+TRITON_AUTOTUNE=<optimal_choice> python finetune_translation.py --model t5-small --epochs 3 --batch-size 8 --dataset-name iwslt2017 --dataset-config iwslt2017-en-de --source-lang en --target-lang de --enable-flaggems
+```
+### Parameters:
+* `TRITON_AUTOTUNE=<optimal_choice>`: default, epsilon, stepwise
+* `--model=<model_name>`: choices=[
+            "t5-small",
         ]
 
 # Visualization
