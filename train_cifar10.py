@@ -221,7 +221,7 @@ def main():
             )
         else:
             date: str = datetime.now().strftime("%m_%d_%H_%M_%S")
-            stats_logger.save(f"vgg16_{autotuner}_autotuner_{date}.json")
+            stats_logger.save(f"{args.model}_{autotuner}_autotuner_{date}.json")
 
 
 if __name__ == "__main__":
