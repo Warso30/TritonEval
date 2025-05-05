@@ -4,6 +4,7 @@ import flag_gems
 import peft
 import torch
 import transformers
+from transformers import AutoProcessor, LlavaForConditionalGeneration
 
 
 class TimerCallback(transformers.TrainerCallback):
@@ -19,7 +20,8 @@ class TimerCallback(transformers.TrainerCallback):
         self.end_timer.record()
         torch.cuda.synchronize()
         print(
-            f"Epoch {int(state.epoch)} finished in {self.start_timer.elapsed_time(self.end_timer) / 1000}s"
+            f"Epoch {int(state.epoch)} finished in "
+            f"{self.start_timer.elapsed_time(self.end_timer)/1000:.2f}s"
         )
 
 
@@ -49,7 +51,7 @@ def format_batch(batch, tokenizer):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fine-tune llama3.2-1b")
+    parser = argparse.ArgumentParser(description="Fine-tune LLaVA-1.5-7B")
     parser.add_argument(
         "--access-token", required=True, help="Huggingface access token"
     )
@@ -57,29 +59,33 @@ def main():
         "--enable-flaggems", action="store_true", help="Enable FlagGems"
     )
     args = parser.parse_args()
-    model_name = "meta-llama/Llama-3.2-1B"
+
+    model_name = "llava-hf/llava-1.5-7b-hf"
     output_dir = "finetuned_models"
 
-    dataset = datasets.load_dataset("tatsu-lab/alpaca")
-
-    tokenizer = transformers.AutoTokenizer.from_pretrained(
-        model_name, token=args.access_token
+    # load multimodal processor & pull out the tokenizer
+    processor = AutoProcessor.from_pretrained(
+        model_name, token=args.access_token, cache_dir="/mnt/b/cache"
     )
+    tokenizer = processor.tokenizer
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    bnb_config = transformers.BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
+    # prepare your Alpaca dataset
+    dataset = datasets.load_dataset("tatsu-lab/alpaca")
+    tokenized = dataset["train"].map(
+        format_batch,
+        batched=True,
+        remove_columns=dataset["train"].column_names,
+        fn_kwargs={"tokenizer": tokenizer},
     )
-    model = transformers.AutoModelForCausalLM.from_pretrained(
+
+    model = LlavaForConditionalGeneration.from_pretrained(
         model_name,
-        quantization_config=bnb_config,
-        device_map="auto",
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
         token=args.access_token,
     )
-    model = peft.prepare_model_for_kbit_training(model)
+    model = model.to("cuda")
 
     lora_config = peft.LoraConfig(
         r=8,
@@ -90,13 +96,6 @@ def main():
         task_type="CAUSAL_LM",
     )
     model = peft.get_peft_model(model, lora_config)
-
-    tokenized = dataset["train"].map(
-        format_batch,
-        batched=True,
-        remove_columns=dataset["train"].column_names,
-        fn_kwargs={"tokenizer": tokenizer},
-    )
 
     data_collator = transformers.DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False
@@ -111,8 +110,6 @@ def main():
         logging_steps=10,
         save_steps=200,
         save_total_limit=2,
-        fp16=False,
-        optim="paged_adamw_8bit",
     )
 
     trainer = transformers.Trainer(

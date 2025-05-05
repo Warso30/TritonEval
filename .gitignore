@@ -1,6 +1,7 @@
 *.pth
 .venv/
 data/
+finetuned_models/
 src/
 results/
 stats/
