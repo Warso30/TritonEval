@@ -1,4 +1,5 @@
 import os
+import math
 import json
 import argparse
 import numpy as np
@@ -15,11 +16,26 @@ def read_stats(path: Optional[str]) -> list:
     return stats["round_stats"]
 
 
+def find_yrange(data: List[float]):
+    first_max = 0
+    second_max = 0
+    min = 10**9
+    for val in data:
+        if val > first_max:
+            second_max = first_max
+            first_max = val
+        elif val > second_max:
+            second_max = val
+        if val < min:
+            min = val
+    return first_max, second_max, min
+
+
 def adjust_yvalues(
     values: List[float],
     threshold: float = 0.15,
     max: float = 100,
-    lower_ratio: float = 0.6,
+    lower_ratio: float = 0.8,
 ):
     y_vals = np.array(values, dtype=float)
     adj_vals = np.zeros_like(y_vals)
@@ -50,13 +66,24 @@ def apply_avg_filter(data: List[float], avg_len: int, step_size: int) -> List[fl
 
 
 def plot(stats: Dict[str, List[float]], save: bool, avg_len: int, step_size: int):
-    threshold = 0.1
-    max_val = 60
-    yticks = np.arange(0, threshold + 0.01, step=0.02)
-    if max_val > threshold:
-        high_yticks = np.linspace(threshold, max_val, num=5)[1:].astype(np.int16)
-        yticks = np.concatenate((yticks, high_yticks))
-    adj_yticks = adjust_yvalues(yticks, threshold, max_val)
+    ymax, ymid, ymin = 0, 0, 10**9
+    for stat_type in stats:
+        stat_data, _ = stats[stat_type]
+        if stat_data:
+            stat_data = [s["duration"] for s in stat_data]
+            curr_max, curr_mid, curr_min = find_yrange(stat_data)
+            ymax = max(ymax, curr_max)
+            ymid = max(ymid, curr_mid)
+            ymin = min(ymin, curr_min)
+    ymax, ymid, ymin = (
+        math.ceil(ymax * 100) / 100,
+        math.ceil(ymid * 100) / 100,
+        math.floor(ymin * 100) / 100,
+    )
+    yticks = np.arange(ymin, ymid + 0.002, step=0.005)
+    high_yticks = np.linspace(ymid, ymax, num=5)[1:].astype(np.float32)
+    yticks = np.concatenate((yticks, high_yticks))
+    adj_yticks = adjust_yvalues(yticks, ymid, ymax)
 
     fig_durations, ax_durations = plt.subplots()
     fig_losses, ax_losses = plt.subplots()
@@ -70,7 +97,7 @@ def plot(stats: Dict[str, List[float]], save: bool, avg_len: int, step_size: int
             durations_steps = list(range(1, len(durations) + 1))
             losses = [s["loss"] for s in stat_data]
             losses_steps = list(range(1, len(losses) + 1))
-            durations = adjust_yvalues(durations, threshold, max_val)
+            durations = adjust_yvalues(durations, ymid, ymax)
             ax_durations.plot(
                 durations_steps,
                 durations,
@@ -81,8 +108,7 @@ def plot(stats: Dict[str, List[float]], save: bool, avg_len: int, step_size: int
             ax_durations.legend()
             ax_losses.plot(losses_steps, losses, label=stat_type)
             ax_losses.legend()
-
-    ax_durations.set_yticks(adj_yticks, labels=[f"{t:.2f}" for t in yticks])
+    ax_durations.set_yticks(adj_yticks, labels=[f"{t:.3f}" for t in yticks])
     ax_durations.set_xlabel("Step")
     ax_durations.set_ylabel("Time")
     ax_durations.set_title("Time for Each Step")
