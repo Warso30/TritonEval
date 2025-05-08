@@ -225,7 +225,11 @@ def main():
         )
     end_time = datetime.now()
     print(f"Training finished at {end_time}. Duration: {end_time - start_time}")
-
+    
+    if args.enable_flaggems:
+        autotuner = os.getenv("TRITON_AUTOTUNE", "default")
+    else:
+        autotuner = "no"
     if args.stat_name:
         stats_logger.save(
             args.stat_name
@@ -234,7 +238,7 @@ def main():
         )
     else:
         date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        stats_logger.save(f"{args.rnn_type}_{date_str}.json")
+        stats_logger.save(f"{args.rnn_type}_{autotuner}_{date_str}.json")
 
 
 if __name__ == "__main__":

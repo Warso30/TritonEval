@@ -13,7 +13,6 @@ from models import *
 
 
 def get_dataloaders(batch_size, num_workers):
-    """数据加载：CIFAR10，随机裁剪、翻转、标准化"""
     transform_train = torchvision.transforms.Compose(
         [
             torchvision.transforms.RandomCrop(32, padding=4),
@@ -48,7 +47,6 @@ def get_dataloaders(batch_size, num_workers):
 
 
 def train_one_epoch(model, loader, criterion, optimizer, device):
-    """单轮训练，记录每步耗时和累计损失"""
     model.train()
     running_loss = 0.0
     start_evt = torch.cuda.Event(enable_timing=True)
@@ -70,7 +68,6 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
 
 
 def validate(model, loader, criterion, device):
-    """验证，计算损失和准确率"""
     model.eval()
     val_loss = 0.0
     correct = total = 0
@@ -87,7 +84,6 @@ def validate(model, loader, criterion, device):
 
 
 def train(model, train_loader, val_loader, criterion, optimizer, device, epochs):
-    """完整训练流程：多轮训练 + 验证 + 最佳模型保存"""
     best_acc = 0.0
     for epoch in range(1, epochs + 1):
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
@@ -160,7 +156,6 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_loader, val_loader = get_dataloaders(args.batch_size, args.num_workers)
 
-    # 构建模型（VGG16），并行 + 冻结部分层 :contentReference[oaicite:7]{index=7}
     MODEL_MAP = {
         "VGG16": lambda: VGG("VGG16"),
         "ResNet18": ResNet18,
@@ -208,7 +203,6 @@ def main():
                 args.epochs,
             )
     finally:
-        # 结果保存
         if args.enable_flaggems:
             autotuner = os.getenv("TRITON_AUTOTUNE", "default")
         else:
@@ -221,7 +215,7 @@ def main():
             )
         else:
             date: str = datetime.now().strftime("%m_%d_%H_%M_%S")
-            stats_logger.save(f"{args.model}_{autotuner}_autotuner_{date}.json")
+            stats_logger.save(f"{args.model}_{autotuner}_{date}.json")
 
 
 if __name__ == "__main__":
