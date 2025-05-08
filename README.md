@@ -63,6 +63,18 @@ TRITON_AUTOTUNE=<optimal_choice> python finetune_translation.py --model t5-small
             "t5-small",
         ]
 
+# Text Classification Training
+Run
+```bash
+TRITON_AUTOTUNE=<optimal_choice> python train_rnn.py --enable-flaggems --rnn-type {rnn_type}
+```
+### Parameters:
+* `TRITON_AUTOTUNE=<optimal_choice>`: default, epsilon, stepwise
+* `--model=<model_name>`: choices=[
+            "RNN",
+            "LSTM",
+        ]
+
 # Visualization
 
 ```bash
