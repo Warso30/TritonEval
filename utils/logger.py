@@ -1,5 +1,20 @@
+import sys
 import os
 import json
+from contextlib import contextmanager
+
+
+@contextmanager
+def redirect_stdout(file_path):
+    if file_path:
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        origin_stdout = sys.stdout
+        with open(file_path, "w") as f:
+            sys.stdout = f
+            yield
+            sys.stdout = origin_stdout
+    else:
+        yield
 
 
 class StatsLogger:

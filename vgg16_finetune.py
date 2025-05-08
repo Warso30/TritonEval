@@ -5,7 +5,8 @@ from datetime import datetime
 import torch
 import torchvision
 import tqdm
-from utils.logger import StatsLogger
+from utils.logger import StatsLogger, redirect_stdout
+from utils.log_analyzer import analyze_log
 
 
 def get_dataloaders(batch_size, num_workers):
@@ -53,7 +54,10 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
     running_loss = 0.0
     start_timer = torch.cuda.Event(enable_timing=True)
     end_timer = torch.cuda.Event(enable_timing=True)
+    round_num = 1
     for inputs, targets in tqdm.tqdm(loader, desc="Train", leave=False):
+        print(f"round: {round_num}")
+        round_num += 1
         start_timer.record()
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
@@ -86,18 +90,24 @@ def validate(model, loader, criterion, device):
     return val_loss / len(loader.dataset), correct / total
 
 
-def train(model, train_loader, val_loader, criterion, optimizer, device, epochs):
+def train(
+    model, train_loader, val_loader, criterion, optimizer, device, epochs, log_path
+):
     best_acc = 0.0
 
-    for epoch in range(1, epochs + 1):
-        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
-        val_loss, val_acc = validate(model, val_loader, criterion, device)
-        stats_logger.log_epoch(train_loss, val_loss, val_acc)
+    with redirect_stdout(log_path):
+        for epoch in range(1, epochs + 1):
+            print(f"epoch: {epoch}")
+            train_loss = train_one_epoch(
+                model, train_loader, criterion, optimizer, device
+            )
+            val_loss, val_acc = validate(model, val_loader, criterion, device)
+            stats_logger.log_epoch(train_loss, val_loss, val_acc)
 
-        # Save best model
-        if val_acc > best_acc:
-            best_acc = val_acc
-            torch.save(model.state_dict(), "best_vgg16_flaggems.pth")
+            # Save best model
+            if val_acc > best_acc:
+                best_acc = val_acc
+                torch.save(model.state_dict(), "best_vgg16_flaggems.pth")
 
 
 def main():
@@ -129,6 +139,18 @@ def main():
     parser.add_argument(
         "--stat-name", type=str, default=None, help="File name to store statistics"
     )
+    parser.add_argument(
+        "--log-path",
+        type=str,
+        default="stats/log.json",
+        help="File path to the log file",
+    )
+    parser.add_argument(
+        "--ana-path",
+        type=str,
+        default="stats/ana.json",
+        help="File path to save the analysis result",
+    )
     args = parser.parse_args()
 
     global stats_logger
@@ -154,6 +176,7 @@ def main():
                     optimizer,
                     device,
                     args.epochs,
+                    args.log_path,
                 )
         else:
             train(
@@ -164,6 +187,7 @@ def main():
                 optimizer,
                 device,
                 args.epochs,
+                args.log_path,
             )
     finally:
         if args.enable_flaggems:
@@ -179,6 +203,7 @@ def main():
         else:
             date: str = datetime.now().strftime("%m_%d_%H_%M_%S")
             stats_logger.save(f"vgg16_{autotuner}_autotuner_{date}.json")
+        analyze_log(args.log_path, args.ana_path)
 
 
 if __name__ == "__main__":
