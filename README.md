@@ -30,7 +30,7 @@ to format all codes before commit.
 # CIFAR-10 Training
 Run
 ```bash
-TRITON_AUTOTUNE=<optimal_choice> python train_cifar10.py --enable-flaggems --model=<model_name>
+rm -rf ~/.triton/cache && TRITON_AUTOTUNE=<optimal_choice> python train_cifar10.py --enable-flaggems --model=<model_name>
 ```
 ### Parameters:
 * `TRITON_AUTOTUNE=<optimal_choice>`: default, epsilon, stepwise
@@ -55,7 +55,7 @@ TRITON_AUTOTUNE=<optimal_choice> python train_cifar10.py --enable-flaggems --mod
 # Translation Training
 Run
 ```bash
-TRITON_AUTOTUNE=<optimal_choice> python finetune_translation.py --model t5-small --epochs 3 --batch-size 8 --dataset-name iwslt2017 --dataset-config iwslt2017-en-de --source-lang en --target-lang de --enable-flaggems
+rm -rf ~/.triton/cache && TRITON_AUTOTUNE=<optimal_choice> python finetune_translation.py --model t5-small --epochs 3 --batch-size 8 --dataset-name iwslt2017 --dataset-config iwslt2017-en-de --source-lang en --target-lang de --enable-flaggems
 ```
 ### Parameters:
 * `TRITON_AUTOTUNE=<optimal_choice>`: default, epsilon, stepwise
@@ -66,7 +66,7 @@ TRITON_AUTOTUNE=<optimal_choice> python finetune_translation.py --model t5-small
 # Text Classification Training
 Run
 ```bash
-TRITON_AUTOTUNE=<optimal_choice> python train_rnn.py --enable-flaggems --rnn-type {rnn_type}
+rm -rf ~/.triton/cache && TRITON_AUTOTUNE=<optimal_choice> python train_rnn.py --enable-flaggems --rnn-type {rnn_type}
 ```
 ### Parameters:
 * `TRITON_AUTOTUNE=<optimal_choice>`: default, epsilon, stepwise
