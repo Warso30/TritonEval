@@ -65,7 +65,13 @@ def apply_avg_filter(data: List[float], avg_len: int, step_size: int) -> List[fl
     return out
 
 
-def plot(stats: Dict[str, List[float]], save: bool, avg_len: int, step_size: int):
+def plot(
+    stats: Dict[str, List[float]],
+    save: bool,
+    avg_len: int,
+    step_size: int,
+    save_file_name: str,
+):
     ymax, ymid, ymin = 0, 0, 10**9
     for stat_type in stats:
         stat_data, _ = stats[stat_type]
@@ -120,8 +126,8 @@ def plot(stats: Dict[str, List[float]], save: bool, avg_len: int, step_size: int
     if save:
         os.makedirs("plots", exist_ok=True)
         date: str = datetime.now().strftime("%m_%d_%H_%M_%S")
-        fig_durations.savefig(f"plots/time_{date}")
-        fig_losses.savefig(f"plots/loss_{date}")
+        fig_durations.savefig(f"plots/{save_file_name}_time_{date}")
+        fig_losses.savefig(f"plots/{save_file_name}_loss_{date}")
     else:
         plt.show()
 
@@ -166,6 +172,12 @@ def main():
         help="The length of the moving average filter",
     )
     parser.add_argument("--no-save", action="store_true", help="Save the plot")
+    parser.add_argument(
+        "--save-file-name",
+        type=str,
+        default="plot",
+        help="The name of the file to save the plot",
+    )
     args = parser.parse_args()
 
     stats = {
@@ -176,7 +188,7 @@ def main():
         "confidence": (read_stats(args.confidence), "s"),
     }
 
-    plot(stats, not args.no_save, args.avg_len, args.step_size)
+    plot(stats, not args.no_save, args.avg_len, args.step_size, args.save_file_name)
 
 
 if __name__ == "__main__":

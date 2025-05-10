@@ -225,7 +225,7 @@ def main():
         )
     end_time = datetime.now()
     print(f"Training finished at {end_time}. Duration: {end_time - start_time}")
-    
+
     if args.enable_flaggems:
         autotuner = os.getenv("TRITON_AUTOTUNE", "default")
     else:

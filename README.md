@@ -91,6 +91,7 @@ All options are **optional**. If you omit an option, its corresponding plot (or 
 | `--epsilon <FILE>`     | Path to JSON file    | Plot the **epsilon autotuner** data series from `<FILE>`.                                           |
 | `--avg-len <INT>`      | Integer (e.g. 300)   | Apply a running‐average filter of length `<INT>` to each plotted series.                  |
 | `--step-size <INT>`    | Integer (e.g. 100)   | When filtering, jump the window by `<INT>` samples between consecutive averages.          |
+| `--save-file-name <STRING>`    | String (e.g. VGG16)   | To define save file name.          |
 
 ### How It Works
 
