@@ -13,10 +13,14 @@ def analyze_log(log_path, ana_path):
         r"on config\s+`[^`]+`\s+"
         r"took\s+(?P<time>[\d.]+)ms"
     )
+    # best_config_pattern_w_time = (
+    #     r"Triton autotuning for function `(?P<func>\w+)` "
+    #     r"with `(?P<params>.+?)` "
+    #     r"finished after (?P<time>[0-9.]+)s"
+    # )
     best_config_pattern = (
         r"Triton autotuning for function `(?P<func>\w+)` "
-        r"with `(?P<params>.+?)` "
-        r"finished after (?P<time>[0-9.]+)s"
+        r"with `(?P<params>.+?)` finished"
     )
     epoch_pattern = r"^\s*epoch\s*:\s*(\d+)\s*$"
     round_pattern = r"^\s*round\s*:\s*(\d+)\s*$"
@@ -50,8 +54,8 @@ def analyze_log(log_path, ana_path):
                 elif pattern == "best_config":
                     func_name = res.group("func")
                     params_str = res.group("params")
-                    time_s = float(res.group("time"))
-                    ana_result[-1][-1][func_name][pattern][params_str] = time_s
+                    # time_s = float(res.group("time"))
+                    ana_result[-1][-1][func_name][pattern] = params_str
     os.makedirs(os.path.dirname(ana_path), exist_ok=True)
     with open(ana_path, "w") as f:
         json.dump(ana_result, f, indent=2)
