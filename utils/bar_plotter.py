@@ -32,6 +32,8 @@ for json_file in data_dir.glob("*.json"):
     records.append(
         {"model_name": model_name, "type_name": type_name, "total_time": total_time}
     )
+    if len(records) % 3 == 0:
+        records[-1], records[-2] = records[-2], records[-1]
 df = pd.DataFrame(records)
 
 default_total_times = df[df.type_name == "default"].set_index("model_name")[
