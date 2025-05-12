@@ -4,7 +4,8 @@ import os
 from datetime import datetime
 import torch
 import tqdm
-from utils.logger import StatsLogger
+from utils.logger import StatsLogger, redirect_stdout
+from utils.log_analyzer import analyze_log
 
 import torch.nn as nn
 
@@ -34,7 +35,7 @@ def get_dataloaders(
     batch_size,
     num_workers,
 ):
-    """数据加载：使用Hugging Face datasets和tokenizer"""
+
     print(f"Loading dataset '{dataset_name}' ({dataset_config})")
     raw_datasets = load_dataset(dataset_name, dataset_config)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -130,15 +131,16 @@ def get_dataloaders(
 
 
 def train_one_epoch(model, loader, optimizer, device):
-    """单轮训练 (adapted for Hugging Face models)"""
     model.train()
     running_loss = 0.0
     total_samples = 0
     start_evt = torch.cuda.Event(enable_timing=True)
     end_evt = torch.cuda.Event(enable_timing=True)
-
+    round_num = 1
     for batch in tqdm.tqdm(loader, desc="Train", leave=False):
         # Move batch to device (DataCollator usually returns dict of tensors)
+        print(f"round: {round_num}")
+        round_num += 1
         batch = {k: v.to(device) for k, v in batch.items()}
         optimizer.zero_grad()
 
@@ -164,7 +166,7 @@ def train_one_epoch(model, loader, optimizer, device):
 
 
 def validate(model, loader, device):
-    """验证 (adapted for Hugging Face models)"""
+
     model.eval()
     val_loss = 0.0
     total_correct = 0
@@ -199,32 +201,43 @@ def validate(model, loader, device):
     return avg_loss, accuracy
 
 
-def train(model, train_loader, val_loader, optimizer, device, epochs, model_save_path):
-    """完整训练流程 (adapted)"""
+def train(
+    model,
+    train_loader,
+    val_loader,
+    optimizer,
+    device,
+    epochs,
+    model_save_path,
+    log_path,
+):
+
     best_val_metric = float("inf")  # Use validation loss for saving best model
     # Or use float('-inf') if using accuracy/BLEU
+    with redirect_stdout(log_path):
+        for epoch in range(1, epochs + 1):
+            print(f"epoch: {epoch}")
+            train_loss = train_one_epoch(model, train_loader, optimizer, device)
+            val_loss, val_acc = validate(model, val_loader, device)
 
-    for epoch in range(1, epochs + 1):
-        print(f"\n--- Epoch {epoch}/{epochs} ---")
-        train_loss = train_one_epoch(model, train_loader, optimizer, device)
-        val_loss, val_acc = validate(model, val_loader, device)
+            stats_logger.log_epoch(
+                train_loss, val_loss, val_acc
+            )  # Log full epoch stats
 
-        stats_logger.log_epoch(train_loss, val_loss, val_acc)  # Log full epoch stats
-
-        # Save best model based on validation loss (lower is better)
-        if val_loss < best_val_metric:
-            print(
-                f"Validation loss improved ({best_val_metric:.4f} --> {val_loss:.4f}). Saving model..."
-            )
-            best_val_metric = val_loss
-            # Save the model state dict and potentially tokenizer/config if needed
-            # For Hugging Face models, saving the full model is often easier
-            # model.save_pretrained(os.path.dirname(model_save_path))
-            # Or just the state_dict like the original script:
-            torch.save(model.state_dict(), model_save_path)
-            print(f"Best model saved to {model_save_path}")
-        else:
-            print(f"Validation loss did not improve from {best_val_metric:.4f}")
+            # Save best model based on validation loss (lower is better)
+            if val_loss < best_val_metric:
+                # print(
+                #     f"Validation loss improved ({best_val_metric:.4f} --> {val_loss:.4f}). Saving model..."
+                # )
+                best_val_metric = val_loss
+                # Save the model state dict and potentially tokenizer/config if needed
+                # For Hugging Face models, saving the full model is often easier
+                # model.save_pretrained(os.path.dirname(model_save_path))
+                # Or just the state_dict like the original script:
+                torch.save(model.state_dict(), model_save_path)
+                # print(f"Best model saved to {model_save_path}")
+            # else:
+            # print(f"Validation loss did not improve from {best_val_metric:.4f}")
 
 
 def main():
@@ -312,7 +325,18 @@ def main():
         default="best_translation_model.pth",
         help="File name for saving the best model state dict",
     )
-
+    parser.add_argument(
+        "--log-path",
+        type=str,
+        default="stats/log.json",
+        help="File path to the log file",
+    )
+    parser.add_argument(
+        "--ana-path",
+        type=str,
+        default="stats/ana.json",
+        help="File path to save the analysis result",
+    )
     args = parser.parse_args()
 
     # --- Setup ---
@@ -401,6 +425,7 @@ def main():
                     device,
                     args.epochs,
                     model_save_path,
+                    args.log_path,
                 )
             else:
                 print("Running training with FlagGems enabled...")
@@ -413,6 +438,7 @@ def main():
                         device,
                         args.epochs,
                         model_save_path,
+                        args.log_path,
                     )
         else:
             print("Running training without FlagGems...")
@@ -453,17 +479,8 @@ def main():
             filename = f"{model_short_name}_{autotuner}_{date_str}.json"
 
         stats_logger.save(filename)
+        analyze_log(args.log_path, args.ana_path)
 
 
 if __name__ == "__main__":
     main()
-
-    # Example Usage:
-    # Basic T5-small run:
-    # python finetune_translation.py --model t5-small --epochs 3 --batch-size 8 --dataset-name iwslt2017 --dataset-config iwslt2017-en-de --source-lang en --target-lang de
-    #
-    # Run with FlagGems enabled:
-    # python finetune_translation.py --model t5-small --epochs 3 --batch-size 8 --dataset-name iwslt2017 --dataset-config iwslt2017-en-de --source-lang en --target-lang de --enable-flaggems
-    #
-    # Run with BART:
-    # python finetune_translation.py --model facebook/bart-base --epochs 3 --batch-size 8 --dataset-name iwslt2017 --dataset-config iwslt2017-en-fr --source-lang en --target-lang fr --enable-flaggems
