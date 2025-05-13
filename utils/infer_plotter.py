@@ -51,6 +51,11 @@ df = pd.concat(
     ],
     ignore_index=True,
 )
+sns.set_theme(
+    context="paper",  # smaller labels ideal for publications
+    font="serif",
+    font_scale=1.2,  # slightly larger than default
+)
 plt.figure(figsize=(8, 5))
 sns.scatterplot(
     data=df,

@@ -1,9 +1,11 @@
 bitsandbytes
 blobfile
+brokenaxes
 datasets
 matplotlib
 peft
 protobuf
+seaborn
 tiktoken
 torch==2.6.0
 torchvision
