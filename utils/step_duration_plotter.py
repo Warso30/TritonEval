@@ -7,6 +7,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
 import argparse
 import json
+import math
 
 
 def apply_avg_filter(data, size):
@@ -27,7 +28,8 @@ def preprocess(type_name, json_path):
     with open(json_path, "r") as f:
         stats = json.load(f)
     durations = [s["duration"] for s in stats["round_stats"]]
-    durations = apply_avg_filter(durations, 40)
+    durations = apply_avg_filter(durations, int(0.01 * len(durations)))
+    durations = [math.log(d) for d in durations]
     stat = pd.DataFrame(
         {
             "steps": np.arange(1, len(durations) + 1),
@@ -92,8 +94,6 @@ sns.set_theme(
 )
 
 fig, ax = plt.subplots(figsize=(8, 5))
-ax.yaxis.set_major_locator(mticker.MultipleLocator(10))
-ax.yaxis.set_minor_locator(mticker.MultipleLocator(5))
 sns.lineplot(data=df, x="steps", y="time", hue="type_name", ax=ax)
 
 for line in ax.lines:
@@ -137,15 +137,18 @@ if args.best_config:
         else:
             ax.scatter([index], [ymid], marker="*", s=50, zorder=5, color="forestgreen")
 
-axins = inset_axes(ax, width="40%", height="60%", loc="upper right")
-sns.lineplot(data=df, x="steps", y="time", hue="type_name", ax=axins, legend=False)
-axins.set_ylim(0.2, 0.6)
-axins.set_xlim(1000, 3000)
-mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
 ax.set_xlabel("Number of Steps")
-ax.set_ylabel("Time per Step(ms)")
-ax.set_title("T5 Finetuning Time Comparison on Different Autotuner Modes")
+ax.set_ylabel("Time(ms) per Step (log scale)")
+import os
+
+model_name = os.getenv("MODEL_NAME", "None")
+ax.set_title(f"{model_name} Finetuning Time Comparison on Different Autotuner Modes")
 ax.legend(title="Autotuner Mode", loc="upper center")
-axins.set_xlabel("Number of Steps")
-axins.set_ylabel("Time per Step(ms)")
 plt.show()
+# plt.savefig(f"plots/{model_name}_step_time.png",
+#             bbox_inches="tight",
+#             transparent=False)
+
+# plt.savefig(f"plots/{model_name}_step_time.svg",
+#             format="svg",
+#             bbox_inches="tight")
