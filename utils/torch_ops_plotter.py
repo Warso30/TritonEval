@@ -25,14 +25,30 @@ def apply_avg_filter(data, size):
     return filtered_data
 
 
+# def preprocess(mode, json_path):
+#     with open(json_path, "r") as f:
+#         stats = json.load(f)
+#     for stat in stats:
+#         trimmed = stats[stat][:3000]
+#         stats[stat] = pd.DataFrame(
+#             {
+#                 "iteration": np.arange(1, len(trimmed) + 1),
+#                 "time": trimmed,
+#                 "mode": mode,
+#             }
+#         )
+#     return stats
 def preprocess(mode, json_path):
     with open(json_path, "r") as f:
         stats = json.load(f)
     for stat in stats:
+        trimmed = stats[stat][:8000]
+        sampled = [(i + 1, v) for i, v in enumerate(trimmed) if i % 5 == 0]
+        iterations, times = zip(*sampled)
         stats[stat] = pd.DataFrame(
             {
-                "iteration": np.arange(1, len(stats[stat]) + 1),
-                "time": stats[stat],
+                "iteration": iterations,
+                "time": times,
                 "mode": mode,
             }
         )
@@ -75,7 +91,8 @@ sns.set_theme(
     font_scale=1.2,  # slightly larger than default
 )
 for i, df in enumerate(dfs):
-    fig = plt.figure(figsize=(8, 5))
+    fig = plt.figure(figsize=(16, 10))
+    op_name = ops[i]
     if ops[i] == "mm":
         bax = brokenaxes(ylims=((0, 0.2), (50, 100)), hspace=0.1, height_ratios=(1, 2))
         bax_high, bax_low = bax.axs
@@ -161,4 +178,6 @@ for i, df in enumerate(dfs):
     bax_low.set_ylabel("Time(ms)")
     bax_high.legend(title="Autotuner Mode", loc="upper right")
 
-plt.show()
+    plt.savefig(f"torch_{op_name}_time_8k.png", bbox_inches="tight", dpi=600)
+    plt.savefig(f"torch_{op_name}_time_8k.svg", bbox_inches="tight")
+    plt.close(fig)

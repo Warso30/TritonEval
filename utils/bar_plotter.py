@@ -43,6 +43,10 @@ df["scaled_time"] = df.apply(
     lambda r: r["total_time"] / default_total_times[r["model_name"]], axis=1
 )
 
+print(df)
+df.to_csv('transformer.csv', index=False, encoding='utf-8')
+hue_order = ["default", "stepwise", "epsilon",]
+
 plt.figure(figsize=(12, 5))
 sns.set_theme(style="darkgrid")
 sns.barplot(

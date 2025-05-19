@@ -4,7 +4,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
-
 import argparse
 import json
 import math
@@ -92,14 +91,36 @@ df = pd.concat(
     ignore_index=True,
 )
 
+
+max_step = df["steps"].max()
+df = df[df["steps"] < max_step]
+
+
+mapping = {"default": "Default", "stepwise": "Stepwise", "epsilon": "Epsilon"}
+df["type_name"] = df["type_name"].map(mapping)
+hue_order = ["Default", "Stepwise", "Epsilon"]
+
 sns.set_theme(
     context="paper",  # smaller labels ideal for publications
+    style="white",
     font="serif",
-    font_scale=1.2,  # slightly larger than default
+    font_scale=1.9,  # slightly larger than default
 )
 
 fig, ax = plt.subplots(figsize=(8, 5))
-sns.lineplot(data=df, x="steps", y="time", hue="type_name", ax=ax)
+sns.lineplot(data=df, hue="type_name", x="steps", y="time", hue_order=hue_order, ax=ax)
+
+ax.tick_params(
+    axis="both", 
+    # which='major', 
+    direction="out",
+    length=3,
+    width=1,
+    # top=True,
+    # right=True,
+    bottom=True,
+    left=True,
+)
 
 for line in ax.lines:
     label = line.get_label()
@@ -113,7 +134,7 @@ for line in ax.lines:
         x0,
         y0,
         marker="o",
-        s=80,
+        s=50,
         color=color,
         edgecolor="black",
         linewidth=1.0,
@@ -142,19 +163,68 @@ if args.best_config:
         else:
             ax.scatter([index], [ymid], marker="*", s=50, zorder=5, color="forestgreen")
 
-ax.set_xlabel("Number of Steps")
+
+N_zoom = 300
+zoom_df = df[df["steps"] >= df["steps"].max() - N_zoom]
+axins = inset_axes(ax, width="70%", height="50%", loc="upper right", borderpad=0.3)
+sns.lineplot(
+    data=zoom_df,
+    x="steps",
+    y="time",
+    hue="type_name",
+    hue_order=hue_order,
+    ax=axins,
+    legend=False,
+)
+
+x0, x1 = zoom_df["steps"].min(), zoom_df["steps"].max()
+y0, y1 = zoom_df["time"].min(), zoom_df["time"].max()
+axins.set_xlim(x0, x1)
+axins.set_ylim(y0, y1)
+axins.tick_params(labelsize=10)
+mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
+
+axins.tick_params(
+    axis="both", 
+    # which='major',   
+    direction="out", 
+    length=3, 
+    width=1,
+    # top=True, 
+    # right=True,
+    bottom=True,
+    left=True,
+)
+
+axins.set_xlabel("")
+axins.set_ylabel("")
+
+
+# axins.tick_params(
+#     axis="both",     
+#     which="both",   
+#     bottom=False,    
+#     left=False,      
+#     labelbottom=False,
+#     labelleft=False,
+# )
+axins.grid(
+    True, 
+    which="major",
+    linestyle="--", 
+    color="gray",
+    linewidth=0.5,
+)
+
+ax.set_xlabel("Steps")
 ax.set_ylabel("Time(ms) per Step (log scale)")
-import os
 
 model_name = args.MODEL_NAME
-ax.set_title(f"{model_name} Finetuning Time Comparison on Different Autotuner Modes")
-ax.legend(title="Autotuner Mode", loc="upper center")
-# plt.show()
-plt.savefig(f"plots/{model_name}_step_time.png",
-            bbox_inches="tight",
-            transparent=False)
+ax.legend(
+    loc="lower center", bbox_to_anchor=(0.5, 1.05), ncol=3, frameon=True, fontsize=14
+)
 
-plt.savefig(f"plots/{model_name}_step_time.svg",
-            format="svg",
-            bbox_inches="tight")
+plt.tight_layout()
+plt.savefig(f"plots/{args.MODEL_NAME}_step_time.png", dpi=600, bbox_inches="tight")
+plt.savefig(f"plots/{args.MODEL_NAME}_step_time.svg", format="svg", bbox_inches="tight")
 plt.close(fig)
